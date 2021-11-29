@@ -18,7 +18,7 @@ export const filter = {
   deleted: 'SHOW_DELETED'
 }
 
-export const maxCommentsDefault = 800
+export const maxCommentsDefault = 1000
 export const maxCommentsLimit   = 20000
 
 // Keys for localStorage

@@ -1,11 +1,8 @@
 import { fetchJson } from '../../utils'
+import { toBase10, toBase36 } from '../../utils'
 
-const chunkSize = 100;
 const postURL    = 'https://api.pushshift.io/reddit/submission/search/?ids='
-const commentURL = `https://api.pushshift.io/reddit/comment/search/?size=${chunkSize}&sort=asc&fields=author,body,created_utc,id,link_id,parent_id,retrieved_on,retrieved_utc,score,subreddit&q=*&link_id=`
-
-const sleep = ms =>
-  new Promise(slept => setTimeout(slept, ms))
+const commentURL = 'https://elastic.pushshift.io/rc/comments/_search?source='
 
 export const getPost = threadID =>
   fetchJson(`${postURL}${threadID}`)
@@ -15,46 +12,39 @@ export const getPost = threadID =>
       throw new Error('Could not get removed post')
     })
 
-// Helper function that fetches a list of comments using a binary backoff,
-// and also returns the next delay which should be passed back in
-const fetchComments = (threadID, after, delay) =>
-  fetchJson(`${commentURL}${threadID}&after=${after}`)
-    .then(({ data }) =>
-      [ data.map(comment => ({
-          ...comment,
-          parent_id: comment.parent_id.substring(3) || threadID,
-          link_id:   comment.link_id.substring(3)   || threadID
-        })),
-        delay
-      ]
-    )
-    .catch(error => {
-      if (delay > 8000) {
-        console.error('pushshift.fetchComments: ' + error)
-        throw new Error('Could not get removed comments');
+export const getComments = (threadID, maxComments) => {
+  const elasticQuery = {
+    query: {
+      term: {
+        link_id: toBase10(threadID)
       }
-      return sleep(delay)
-        .then(() => fetchComments(threadID, after, delay * 2))
-    })
+    },
+    sort: [ 'created_utc' ],
+    size: maxComments,
+    _source: [
+      'author', 'body', 'created_utc', 'parent_id', 'score', 'subreddit', 'link_id', 'retrieved_on', 'retrieved_utc'
+    ]
+  }
 
-const doGetComments = (threadID, chunks = 10, after = 0, delay = 500) =>
-  fetchComments(threadID, after, delay)
-    .then(([comments, newDelay]) => {
-      if (comments.length < chunkSize/2 || chunks <= 1)
-        return comments;
-      const newAfter = Math.max(comments[comments.length - 1].created_utc - 1, after + 1);
-      return (newDelay > 500 ? sleep(newDelay / 2) : Promise.resolve())
-        .then(() => doGetComments(threadID, chunks - 1, newAfter, newDelay))
-        .then(remainingComments => {
-          const seenIDs = new Set(comments.map(c => c.id));
-          for (var i = 0; i < remainingComments.length; i++) {
-            if ( ! seenIDs.has(remainingComments[i].id) )
-              break
-          }
-          comments.push(...remainingComments.slice(i));
-          return comments;
-        })
-    })
+  return fetchJson(commentURL + JSON.stringify(elasticQuery))
+    .then(response => {
+      const comments = response.hits.hits
+      return comments.map(comment => {
+        comment._source.id = toBase36(comment._id)
+        comment._source.link_id = toBase36(comment._source.link_id)
 
-export const getComments = (threadID, maxComments) =>
-  doGetComments(threadID, Math.ceil(maxComments / chunkSize))
+        // Missing parent id === direct reply to thread
+        if (!comment._source.parent_id) {
+          comment._source.parent_id = threadID
+        } else {
+          comment._source.parent_id = toBase36(comment._source.parent_id)
+        }
+
+        return comment._source
+      })
+    })
+    .catch(error => {
+      console.error('pushshift.getComments: ' + error)
+      throw new Error('Could not get removed comments')
+    })
+}

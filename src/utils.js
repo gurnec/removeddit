@@ -27,6 +27,10 @@ export const chunk = (arr, size) => {
   return chunks
 }
 
+// Change bases
+export const toBase36 = number => parseInt(number, 10).toString(36)
+export const toBase10 = numberString => parseInt(numberString, 36)
+
 // Reddits way of indicating that something is deleted (the '\\' is for Reddit and the other is for pushshift)
 export const isDeleted = textBody => textBody === '\\[deleted\\]' || textBody === '[deleted]'
 
