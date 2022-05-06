@@ -6,7 +6,7 @@ import {
   showRemovedAndDeleted, showRemoved, showDeleted
 } from '../../utils'
 
-const unflatten = (commentMap, rootID, postID) => {
+const unflatten = (commentMap, rootID, context, postID) => {
   const commentTree = []
 
   commentMap.forEach(comment => {
@@ -58,6 +58,12 @@ const unflatten = (commentMap, rootID, postID) => {
         replies: missingRootReplies
       }
     }
+    let newRoot
+    while (context && rootComment.parent_id && (newRoot = commentMap.get(rootComment.parent_id))) {
+      newRoot.replies = [rootComment]
+      rootComment = newRoot
+      context--
+    }
     return [rootComment]
   }
 }
@@ -95,13 +101,13 @@ const filterCommentTree = (comments, filterFunction) => {
   return hasOkComment
 }
 
-let commentTree, lastTotal, lastRoot, lastFilter, lastSort, lengthBeforeFiltering
+let commentTree, lastTotal, lastRoot, lastContext, lastFilter, lastSort, lengthBeforeFiltering
 
 const commentSection = (props) => {
   console.time('Build comment tree')
-  const {total, root, commentFilter, commentSort} = props
+  const {total, root, context, commentFilter, commentSort} = props
 
-  const needsRebuild = !(total === lastTotal && root === lastRoot && (
+  const needsRebuild = !(total === lastTotal && root === lastRoot && context === lastContext && (
     commentFilter === lastFilter ||
     lastFilter    === filter.all ||
     lastFilter    === filter.removedDeleted && (
@@ -110,7 +116,7 @@ const commentSection = (props) => {
     )
   ))
   if (needsRebuild) {
-    commentTree = unflatten(props.comments, root, props.postID)
+    commentTree = unflatten(props.comments, root, context, props.postID)
     lengthBeforeFiltering = commentTree.length
   }
 
@@ -142,6 +148,7 @@ const commentSection = (props) => {
   lastSort   = commentSort
   console.timeEnd('Build comment tree')
 
+  props.setMoreContextAvail(commentTree.length > 0 && commentTree[0].parent_id != commentTree[0].link_id)
   props.setAllCommentsFiltered(commentTree.length == 0 && lengthBeforeFiltering > 0)
 
   console.time('Build html tree')
@@ -153,6 +160,7 @@ const commentSection = (props) => {
           {...comment}
           depth={0}
           postAuthor={props.postAuthor}
+          highlightedID={context ? root : null}
         />
       ))
       : <p>No comments found</p>
@@ -164,6 +172,7 @@ const commentSection = (props) => {
 const areEqual = (prevProps, nextProps) => {
   if (prevProps.commentFilter !== nextProps.commentFilter ||
       prevProps.commentSort   !== nextProps.commentSort   ||
+      prevProps.context       !== nextProps.context       ||
       prevProps.root          !== nextProps.root)
     return false
   if (nextProps.reloadingComments)

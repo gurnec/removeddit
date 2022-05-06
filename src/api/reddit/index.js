@@ -43,3 +43,21 @@ export const getComments = commentIDs => (
     .then(results => results.data.children.map(({data}) => data))
     .catch(error => errorHandler(error, 'reddit.getComments'))
 )
+
+// Fetch up to 8 of a comment's parents
+export const getParentComments = (threadID, commentID, parents) => {
+  parents = Math.min(parents, 8)
+  return fetchJson(
+      `${baseURL}/comments/${threadID}?comment=${commentID}&context=${parents}&limit=${parents}&threaded=false&showmore=false`,
+      requestSettings
+    )
+    .then(results => {
+      const { children } = results[1].data
+      // If there are fewer parents than requested, remove the comments which aren't parents
+      const idx = children.findIndex(c => c.data.id == commentID)
+      if (idx >= 0)
+        children.splice(idx + 1)
+      return children.map(({data}) => data)
+    })
+    .catch(error => errorHandler(error, 'reddit.getParentComments'))
+}

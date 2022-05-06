@@ -12,6 +12,9 @@ const Comment = (props) => {
   } else {
     commentStyle += props.depth % 2 === 0 ? 'comment-even' : 'comment-odd'
   }
+  if (props.id == props.highlightedID) {
+    commentStyle += ' highlighted'
+  }
 
   let innerHTML, editedInnerHTML;
   if (props.removed && isRemoved(props.body)) {
@@ -94,6 +97,7 @@ const Comment = (props) => {
               {...comment}
               depth={props.depth + 1}
               postAuthor={props.postAuthor}
+              highlightedID={props.highlightedID}
             />
           ))}
         </div>
