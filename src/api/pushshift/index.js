@@ -112,19 +112,20 @@ export const getCommentsFromIds = async commentIDs => {
 //   1504224000 - 1506815999 (Sep/1/2017 0:00 - Sep/30/2017 23:59:59 UTC)
 //   1517443200 - 1522540799 (Feb/1/2018 0:00 - Mar/31/2018 23:59:59 UTC)
 // The ranges below subtract two weeks from the range start and optionally add two to the end.
-const inBrokenRange = (utc, looseEnd = false) => looseEnd ?
-  utc > 1503014400 && utc < 1508025599 || utc > 1516233600 && utc < 1523750399 :
-  utc > 1503014400 && utc < 1506815999 || utc > 1516233600 && utc < 1522540799
+// TODO: Pushshift requests w/o `q=*` are broken; revert this change when they're fixed
+//const inBrokenRange = (utc, looseEnd = false) => looseEnd ?
+//  utc > 1503014400 && utc < 1508025599 || utc > 1516233600 && utc < 1523750399 :
+//  utc > 1503014400 && utc < 1506815999 || utc > 1516233600 && utc < 1522540799
 
 // The callback() function is called with an Array of comments after each chunk is
 // retrieved. It should return as quickly as possible (scheduling time-taking work
 // later), and may return false to cause getComments to exit early, or true otherwise.
 export const getComments = async (callback, threadID, maxComments, after = 0, before = undefined) => {
-  let chunks = Math.floor(maxComments / chunkSize), firstChunk = true, response, lastCreatedUtc = 1
+  let chunks = Math.floor(maxComments / chunkSize), response, lastCreatedUtc = 1
   while (true) {
 
     let query = commentURLbyLink + threadID
-    if (!inBrokenRange(after))
+    //if (!inBrokenRange(after))
       query += '&q=*'
     if (after)
       query += `&after=${after}`
@@ -154,9 +155,9 @@ export const getComments = async (callback, threadID, maxComments, after = 0, be
     })))
 
     // If there's a chance the comments are in a broken range, restart the retrieval
-    if (firstChunk && !after && (comments.length === 0 || inBrokenRange(comments[0].created_utc, true)))
-      return getComments(callback, threadID, maxComments, 1503014401, before)
-    firstChunk = false
+    //if (firstChunk && !after && (comments.length === 0 || inBrokenRange(comments[0].created_utc, true)))
+    //  return getComments(callback, threadID, maxComments, 1503014401, before)
+    //firstChunk = false
 
     const loadedAllComments = Object.prototype.hasOwnProperty.call(response.metadata, 'total_results') ?
       response.metadata.results_returned >= response.metadata.total_results :
