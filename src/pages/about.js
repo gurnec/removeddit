@@ -96,8 +96,8 @@ const About = props => {
         <p>
           Occasionally, Pushshift (the service used by Unddit) goes offline for a while.
           This can result in &ldquo;Could not get removed post/comments&rdquo; errors on Unddit.
-          To check its status, click <a href='https://api.pushshift.io/reddit/comment/search/?size=1&sort=asc&fields=body&q=*&link_id=wdla1b'>this direct link to Pushshift</a>.
-          You should either get a short message saying that Pushshift is up, or an error.
+          To check its status, click <a href='https://api.pushshift.io/reddit/search/comment?limit=1&filter=body&since=1659370272&until=1659370273&link_id=1957745423'>this direct link to Pushshift</a>.
+          You should either get a message saying that &ldquo;Pushshift is UP!&rdquo; within the first few words of the message, or an error.
         </p>
         </div>
         <div id='difference' className={hash == '#difference' ? 'highlighted' : undefined}>

@@ -1,10 +1,10 @@
 import { fetchJson, sleep } from '../../utils'
 
-export const chunkSize = 250;
-const postURL    = 'https://api.pushshift.io/reddit/submission/search/?fields=author,created_utc,domain,edited,id,link_flair_text,num_comments,permalink,position,removed_by_category,retrieved_on,retrieved_utc,score,selftext,subreddit,thumbnail,thumbnail_height,thumbnail_width,title,url&ids='
-const commentURL = 'https://api.pushshift.io/reddit/comment/search/?fields=author,body,created_utc,id,link_id,parent_id,retrieved_on,retrieved_utc,score,subreddit&'
+export const chunkSize = 1000;
+const postURL    = 'https://api.pushshift.io/reddit/search/submission?filter=author,created_utc,domain,edited,id,link_flair_text,num_comments,permalink,position,removed_by_category,retrieved_on,retrieved_utc,score,selftext,subreddit,thumbnail,thumbnail_height,thumbnail_width,title,url&ids='
+const commentURL = 'https://api.pushshift.io/reddit/search/comment?filter=author,body,created_utc,id,link_id,parent_id,retrieved_on,retrieved_utc,score,subreddit&'
 const commentURLbyIDs  = `${commentURL}ids=`
-const commentURLbyLink = `${commentURL}metadata=true&size=${chunkSize}&sort=asc&link_id=`
+const commentURLbyLink = `${commentURL}limit=${chunkSize}&sort=id&order=asc&link_id=`
 
 const errorHandler = (msg, origError, from) => {
   console.error(from + ': ' + origError)
@@ -62,12 +62,12 @@ class TokenBucket {
   }
 }
 
-const pushshiftTokenBucket = new TokenBucket(2015, 7)
+const pushshiftTokenBucket = new TokenBucket(515, 7)
 
 export const getPost = async threadID => {
   await pushshiftTokenBucket.waitForToken()
   try {
-    return (await fetchJson(`${postURL}${threadID}`)).data[0]
+    return (await fetchJson(`${postURL}${parseInt(threadID, 36)}`)).data[0]
   } catch (error) {
     errorHandler('Could not get removed/edited post', error, 'pushshift.getPost')
   }
@@ -91,7 +91,7 @@ export const getCommentsFromIds = async commentIDs => {
   while (true) {
     await pushshiftTokenBucket.waitForToken()
     try {
-      response = await fetchJson(`${commentURLbyIDs}${commentIDs.join()}`)
+      response = await fetchJson(`${commentURLbyIDs}${commentIDs.map(id => parseInt(id, 36)).join()}`)
       break
     } catch (error) {
       if (delay >= 2000)  // after ~4s of consecutive failures
@@ -120,17 +120,16 @@ export const getCommentsFromIds = async commentIDs => {
 // The callback() function is called with an Array of comments after each chunk is
 // retrieved. It should return as quickly as possible (scheduling time-taking work
 // later), and may return false to cause getComments to exit early, or true otherwise.
-export const getComments = async (callback, threadID, maxComments, after = 0, before = undefined) => {
+export const getComments = async (callback, threadID, maxComments, after = -1, before = undefined) => {
   let chunks = Math.floor(maxComments / chunkSize), response, lastCreatedUtc = 1
   while (true) {
 
-    let query = commentURLbyLink + threadID
+    let query = commentURLbyLink + parseInt(threadID, 36)
     //if (!inBrokenRange(after))
-      query += '&q=*'
-    if (after)
-      query += `&after=${after}`
+    //  query += '&q=*'
+    query += `&since=${after + 1}`
     if (before)
-      query += `&before=${before}`
+      query += `&until=${before}`
     let delay = 0
     while (true) {
       await pushshiftTokenBucket.waitForToken()
@@ -150,7 +149,7 @@ export const getComments = async (callback, threadID, maxComments, after = 0, be
     const comments = response.data
     const exitEarly = !callback(comments.map(c => ({
       ...c,
-      parent_id: c.parent_id?.substring(3) || threadID,
+      parent_id: c.parent_id ? toBase36(c.parent_id) : threadID,
       link_id:   c.link_id?.substring(3)   || threadID
     })))
 
@@ -159,9 +158,10 @@ export const getComments = async (callback, threadID, maxComments, after = 0, be
     //  return getComments(callback, threadID, maxComments, 1503014401, before)
     //firstChunk = false
 
-    const loadedAllComments = Object.prototype.hasOwnProperty.call(response.metadata, 'total_results') ?
-      response.metadata.results_returned >= response.metadata.total_results :
-      comments.length < chunkSize/2
+    //const loadedAllComments = Object.prototype.hasOwnProperty.call(response.metadata, 'total_results') ?
+    //  response.metadata.results_returned >= response.metadata.total_results :
+    //  comments.length < chunkSize/2
+    const loadedAllComments = comments.length < chunkSize*3/4
     if (comments.length)
       lastCreatedUtc = comments[comments.length - 1].created_utc
     if (loadedAllComments || chunks <= 1 || exitEarly)
