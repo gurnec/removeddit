@@ -35,7 +35,7 @@ export const isDeleted = textBody => textBody === '\\[deleted\\]' || textBody ==
 export const isRemoved = textBody => textBody === '\\[removed\\]' || textBody === '[removed]' || textBody === '[ Removed by Reddit ]'
 
 // Default thumbnails for reddit threads
-export const redditThumbnails = ['self', 'default', 'image', 'nsfw']
+export const redditThumbnails = ['self', 'default', 'image', 'nsfw', 'spoiler']
 
 // Parse comments (see https://www.reddit.com/dev/api/#response_body_encoding)
 export const parse = text => markdown.render(text.replaceAll('&lt;', '<').replaceAll('&gt;', '>').replaceAll('&amp;', '&'))
