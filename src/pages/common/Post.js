@@ -56,7 +56,7 @@ const Post = (props) => {
     thumbnail = React.createElement(isUrlThisPost ? Link : 'a', {
       [isUrlThisPost ? 'to' : 'href']: url,
       replace: isUrlThisPost ? props.isLocFullPost : undefined
-    }, <img className='thumbnail' src={props.thumbnail} width={thumbnailWidth} height={thumbnailHeight} alt='Thumbnail' />)
+    }, <img className='thumbnail' src={props.thumbnail.replaceAll('&amp;', '&')} width={thumbnailWidth} height={thumbnailHeight} alt='Thumbnail' />)
   }
 
   const innerHTML = Array(editedModes.length)
