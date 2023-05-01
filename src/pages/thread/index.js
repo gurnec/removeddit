@@ -12,13 +12,14 @@ import {
   getCommentsFromIds,
   chunkSize as pushshiftChunkSize
 } from '../../api/pushshift'
-import { isDeleted, isRemoved, sleep } from '../../utils'
+import { isDeleted, isRemoved, sleep, get, put } from '../../utils'
 import { connect, constrainMaxComments } from '../../state'
 import Post from '../common/Post'
 import CommentSection from './CommentSection'
 import SortBy from './SortBy'
 import CommentInfo from './CommentInfo'
 import LoadMore from './LoadMore'
+import Modal from './Modal'
 
 // A FIFO queue with items pushed in individually, and shifted out in an Array of chunkSize
 class ChunkedQueue {
@@ -53,6 +54,9 @@ class ChunkedQueue {
 // The .firstCreated of the contig containing a post's first comment (see contigs below)
 const EARLIEST_CREATED = 1
 
+// Key for localStorage
+const dismissModalKey = 'modal'
+
 class Thread extends React.Component {
   state = {
     post: {},
@@ -64,7 +68,8 @@ class Thread extends React.Component {
     allCommentsFiltered: false,
     loadedAllComments: false,
     loadingComments: true,
-    reloadingComments: false
+    reloadingComments: false,
+    showModal: !get(dismissModalKey)
   }
   nextMoreContextAvail = true
   nextAllCommentsFiltered = false
@@ -700,6 +705,12 @@ class Thread extends React.Component {
               context={this.state.context}
             />
           </>
+        }
+        {this.state.showModal &&
+          <Modal
+            closeModal={() => this.setState({showModal: false})}
+            closeModalPermanent={() => {this.setState({showModal: false}); put(dismissModalKey, true)}}
+          />
         }
       </>
     )

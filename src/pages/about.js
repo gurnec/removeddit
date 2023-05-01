@@ -46,6 +46,14 @@ const About = props => {
           uses <a href='https://pushshift.io/'>Jason Baumgartner&apos;s service</a> for getting removed comments.
         </p>
         <h2 className='todo'>FAQ</h2>
+        <div id='banned' className={!hash || hash == '#banned' ? 'highlighted' : undefined}>
+        <b className='question'><Link to='/about#banned'>Q:</Link> Why do new posts all have zero comments?</b>
+        <p>
+          On May 1st, Reddit banned Pushshift from the Reddit API.
+          Since Unddit relies on Pushshift to find removed and deleted comments and posts, any posts made after this time will appear to have zero comments on Unddit.
+          The official announcement is <a href='https://old.reddit.com/r/modnews/comments/134tjpe/reddit_data_api_update_changes_to_pushshift_access/' target='_blank' rel='noopener'>available here</a>.
+        </p>
+        </div>
         <div id='delete' className={hash == '#delete' ? 'highlighted' : undefined}>
         <b className='question'><Link to='/about#delete'>Q:</Link> I posted some sensitive information on Reddit. Can you delete this from your page?</b>
         <p>
